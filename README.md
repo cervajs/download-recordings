@@ -4,9 +4,11 @@ Downloaded files are in directories YYYY\MM\DD in working directory
 
 Node.js 8.x required
 
-Config
+Download https://nodejs.org/en/download/ 
+
+# Config  
 fill host and api credentials in index.js
 
 
-Run
+# Run
 node index.js
