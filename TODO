@@ -1,0 +1,6 @@
+ TODO
+- use https://www.npmjs.com/package/query-string for input params
+- use cmdline parser https://www.npmjs.com/package/command-line-args
+- various error scenarios like bad credentials, bad host, ...
+- resume downloading from last run
+- tests

@@ -1,0 +1,26 @@
+{
+  "name": "download-recordings",
+  "version": "1.0.0",
+  "description": "Recordings download script",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cervajs/download-recordings.git"
+  },
+  "author": "Marek Cervenka",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cervajs/download-recordings/issues"
+  },
+  "homepage": "https://github.com/cervajs/download-recordings#readme",
+  "dependencies": {
+    "mkdirp": "^0.5.1",
+    "mkdirp-promise": "^5.0.1",
+    "progress": "^2.0.0",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.2"
+  }
+}
