@@ -19,6 +19,7 @@
   "dependencies": {
     "mkdirp": "^0.5.1",
     "mkdirp-promise": "^5.0.1",
+    "moment": "^2.22.2",
     "progress": "^2.0.0",
     "request": "^2.88.0",
     "request-promise": "^4.2.2"
