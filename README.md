@@ -25,4 +25,10 @@ fill host and api credentials in index.js
 
 
 # Run
+Run terminal(Linux, Mac OS X) or cmd.exe on Windows
+
+```shell
+change directory to directory where scripts was unzipped
+i.e. cd download-recordings-master
 node index.js
+```
