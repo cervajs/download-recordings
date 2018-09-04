@@ -23,7 +23,9 @@ npm install
 ```
 
 # Config  
-fill host and api credentials in index.js
+Fill host and api credentials in config.js
+
+Change filter for CDR list in index.js if you need (apiParams). Default is 6 months back.
 
 
 # Run
