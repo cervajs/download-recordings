@@ -12,9 +12,11 @@ Download and install Node.js https://nodejs.org/en/download/
 
 Download scripts https://github.com/cervajs/download-recordings/archive/master.zip and unzip
 
+Run terminal(Linux, Mac OS X) or cmd.exe on Windows
 
 ```shell
-cd download-recordings
+change directory to directory where scripts was unzipped
+i.e. cd download-recordings
 npm install
 ```
 
