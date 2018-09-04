@@ -3,7 +3,7 @@ This script can download all recordings defined by call history filter
 Downloaded files are in directories YYYY\MM\DD in working directory
 */
 
-
+const config = require('./config')
 const rp = require('request-promise')
 const mkdirp = require('mkdirp-promise')
 const fs = require('fs')
@@ -11,27 +11,23 @@ const path = require('path')
 const util = require('util')
 const fsAccess = util.promisify(fs.access)
 const ProgressBar = require('progress')
-
-//host PBX i.e. company.voipex.io
-const host = ''
-// apikey from System -> API -> REST
-const apiKey = ''
-// apiSecret from System -> API -> REST
-const apiSecret = ''
+const moment = require('moment')
 
 /**
  * @type {string} https://ipbx.docs.apiary.io/#reference/calls/calls/get-call-history
  */
-const apiParams = 'startTime=2018-08-01%2000%3A00&endTime=2018-08-32%2023%3A59'
+// 6 months back
+const apiParams = 'startTime=' + moment().subtract(6, 'months').format() + '&endTime=' + moment().format()
+//const apiParams = 'startTime=2018-08-01&endTime=2018-08-31'
 
 
 // get calls history options
 const options = {
-  uri: 'https://' + host + '/api/calls?' + apiParams,
+  uri: 'https://' + config.host + '/api/calls?' + apiParams,
   method: 'GET',
   auth: {
-    'user': apiKey,
-    'pass': apiSecret
+    'user': config.apiKey,
+    'pass': config.apiSecret
   },
   headers: {
     'Content-Type': 'application/json'
@@ -46,15 +42,16 @@ const options = {
  */
 const downloadFile = (urlPath, fileName) => {
   return new Promise(resolve => {
-    let url = 'https://' + host + urlPath
+    let url = 'https://' + config.host + urlPath
+    fileName = fileName.replace(/\*/gi, 'star')
     let stream = fs.createWriteStream(fileName)
     stream.on('finish', resolve)
     rp({
       method: 'GET',
       url: url,
       auth: {
-        user: apiKey,
-        pass: apiSecret,
+        user: config.apiKey,
+        pass: config.apiSecret,
         sendImmediately: true
       },
       headers: {
