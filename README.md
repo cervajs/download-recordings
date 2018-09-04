@@ -6,15 +6,20 @@ Downloaded files are in directories YYYY\MM\DD in working directory
 # Install
 Node.js 8.x required
 
-Download https://nodejs.org/en/download/ 
+Download and install Node.js https://nodejs.org/en/download/ 
 
-git clone https://github.com/cervajs/download-recordings.git
+Download scripts https://github.com/cervajs/download-recordings/archive/master.zip and unzip
+https://github.com/cervajs/download-recordings/archive/master.zip
 
+
+```shell
+cd download-recordings
+npm install
+```
 
 # Config  
 fill host and api credentials in index.js
 
 
 # Run
-cd download-recordings
 node index.js
