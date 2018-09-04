@@ -9,7 +9,6 @@ Node.js 8.x required
 Download and install Node.js https://nodejs.org/en/download/ 
 
 Download scripts https://github.com/cervajs/download-recordings/archive/master.zip and unzip
-https://github.com/cervajs/download-recordings/archive/master.zip
 
 
 ```shell
