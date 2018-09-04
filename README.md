@@ -2,6 +2,8 @@ This script can download all recordings defined by call history filter
 
 Downloaded files are in directories YYYY\MM\DD in working directory
 
+Works on Linux, MS Windows and Mac OS X
+
 
 # Install
 Node.js 8.x required
