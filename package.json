@@ -15,6 +15,9 @@
   "bugs": {
     "url": "https://github.com/cervajs/download-recordings/issues"
   },
+  "engines": {
+    "node": ">=8.0.0"
+  },
   "homepage": "https://github.com/cervajs/download-recordings#readme",
   "dependencies": {
     "mkdirp": "^0.5.1",
