@@ -47,3 +47,5 @@ node index.js -h
 
 node index.js -h vhXXX.ipex.cz -s 'd513asdasd5661d/4d2asd88/cc94dasd58a' -k '1d6987b2asdasddd6b35fafa' -f '2018-08-05' -t '2018-08-07'
 ```
+
+There is download.log diagnostic file with results after script ends.
