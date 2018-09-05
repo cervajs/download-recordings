@@ -3,8 +3,7 @@ This script can download all recordings defined by call history filter
 Downloaded files are in directories YYYY\MM\DD in working directory
 */
 
-const config = require('./config')
-const rp = require('request-promise')
+const rp = require('request-promise-native')
 const mkdirp = require('mkdirp-promise')
 const fs = require('fs')
 const path = require('path')
