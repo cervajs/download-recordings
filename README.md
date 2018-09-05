@@ -22,11 +22,6 @@ i.e. cd download-recordings-master
 npm install
 ```
 
-# Config  
-Fill host and api credentials in config.js
-
-Change filter for CDR list in index.js if you need (apiParams). Default is 6 months back.
-
 
 # Run
 Run terminal(Linux, Mac OS X) or cmd.exe on Windows
@@ -34,5 +29,21 @@ Run terminal(Linux, Mac OS X) or cmd.exe on Windows
 ```shell
 change directory to directory where scripts was unzipped
 i.e. cd download-recordings-master
-node index.js
+
+show help
+node index.js -h
+
+  Usage: index [options]
+
+  Options:
+
+    -V, --version             output the version number
+    -f, --date-from <value>   from date i.e 2018-08-01
+    -t, --date-to <value>     to date i.e 2018-08-31
+    -h, --host <value>        (REQUIRED) PBX name
+    -k, --api-key <value>     (REQUIRED) API key
+    -s, --api-secret <value>  (REQUIRED) API key secret
+    -h, --help                output usage information
+
+node index.js -h vhXXX.ipex.cz -s 'd513asdasd5661d/4d2asd88/cc94dasd58a' -k '1d6987b2asdasddd6b35fafa' -f '2018-08-05' -t '2018-08-07'
 ```
