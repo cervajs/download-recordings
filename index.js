@@ -8,55 +8,108 @@ const mkdirp = require('mkdirp-promise')
 const fs = require('fs')
 const path = require('path')
 const util = require('util')
-const fsAccess = util.promisify(fs.access)
 const ProgressBar = require('progress')
 const moment = require('moment')
+const winston = require('winston')
+const commander = require('commander')
+
+commander
+  .version('0.1.0')
+  .option('-f, --date-from <value>', '')
+  .option('-t, --date-to <value>', '')
+  .option('-h, --host <value>', '')
+  .option('-k, --api-key <value>', '')
+  .option('-s, --api-secret <value>', '')
+  .parse(process.argv)
 
 /**
  * @type {string} https://ipbx.docs.apiary.io/#reference/calls/calls/get-call-history
  */
 // 6 months back
-const apiParams = 'startTime=' + moment().subtract(6, 'months').format() + '&endTime=' + moment().format()
-//const apiParams = 'startTime=2018-08-01&endTime=2018-08-31'
+// const apiParams = 'startTime=' + moment().subtract(6, 'months').format() + '&endTime=' + moment().format()
 
+// Read date interval from args
+const {dateFrom, dateTo} = commander
+const apiParams = `startTime=${dateFrom}&endTime=${dateTo}`
 
-// get calls history options
-const options = {
-  uri: 'https://' + config.host + '/api/calls?' + apiParams,
-  method: 'GET',
-  auth: {
-    'user': config.apiKey,
-    'pass': config.apiSecret
-  },
-  headers: {
-    'Content-Type': 'application/json'
+/**
+ * Creates options object for specific url 
+ * @param uri
+ * @params json
+ * @returns Object 
+ */
+const createRequestOptions = (uri, json = false) => {
+  const {apiKey, apiSecret} = commander
+  return {
+    uri,
+    method: 'GET',
+    auth: {
+      'user': apiKey,
+      'pass': apiSecret,
+      sendImmediately: true
+    },
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    resolveWithFullResponse: true,
+    json
   }
 }
 
 /**
- * Function for recordings download
+ * Download list of records to be downloaded
+ * @returns Array
+ */
+const getRecordsToDownload = async () => {
+  const {host} = commander
+  const requestOptions = createRequestOptions(
+    `https://${host}/api/calls?${apiParams}`, 
+    true
+  )
+  const {body} = await rp(requestOptions)
+  return body.items.filter(row => row.filename.length > 0)
+}
+
+const logger = winston.createLogger({
+  transports: [
+    // For development purposes you can use console, but it will break progress
+    // new winston.transports.Console(),
+    new winston.transports.File({
+      filename: 'download.log',
+      format: winston.format.combine(
+        winston.format.timestamp({
+          format: 'YYYY-MM-DD hh:mm:ss A ZZ'
+        }),
+        winston.format.json()
+      ),
+      handleExceptions: true
+    })
+  ]
+});
+
+/**
+ * Download concrete record
  * @param urlPath
  * @param fileName
  * @returns {Promise}
  */
 const downloadFile = (urlPath, fileName) => {
-  return new Promise(resolve => {
-    let url = 'https://' + config.host + urlPath
-    fileName = fileName.replace(/\*/gi, 'star')
-    let stream = fs.createWriteStream(fileName)
-    stream.on('finish', resolve)
-    rp({
-      method: 'GET',
-      url: url,
-      auth: {
-        user: config.apiKey,
-        pass: config.apiSecret,
-        sendImmediately: true
-      },
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).pipe(stream)
+  const {host} = commander
+
+  return new Promise(async (resolve, reject) => {
+    fileName = `downloads/${fileName.replace(/\*/gi, 'star')}`
+    try {
+      const requestOptions = createRequestOptions(`https://${host}${urlPath}`)
+      const response = await rp(requestOptions)
+      await prepareDirectory(fileName)
+      const stream = fs
+        .createWriteStream(fileName)
+        .on('finish', resolve)
+        .on('error', error => reject(error))
+      response.pipe(stream)
+    } catch (e) {
+      reject(e.message)
+    }
   })
 }
 
@@ -75,26 +128,30 @@ const prepareDirectory = async (filename) => {
 }
 
 const run = async () => {
-  const cdrReqResult = await rp(options)
-  let cdrRows = JSON.parse(cdrReqResult).items.filter(row => row.filename.length > 0)
-  if (cdrRows.length === 0) {
+  const records = await getRecordsToDownload()
+  if (records.length === 0) {
     console.log('No records')
     return
   }
 
-  console.log(`number of records: ${cdrRows.length}`)
+  console.log(`Number of records: ${records.length}`)
+  const bar = new ProgressBar('Percent done :percent, estimated time :eta(s)', { total: records.length })
 
-  let bar = new ProgressBar('percent done :percent, estimated time :eta(s)', { total: cdrRows.length })
-
-  for (const row of cdrRows) {
-    await prepareDirectory(row.filename)
-    await downloadFile('/api/records/' + row.linkedid + '/stream', row.filename)
-    bar.tick()
+  for (const {linkedid, filename} of records) {
+    try {
+      await downloadFile(`/api/records/${linkedid}/stream`, filename)
+      logger.info(`File ${filename} successfully downloaded`)
+    } catch (e) {
+      logger.error(`File ${filename} could not be downloaded because "${e}"`)
+    } finally {
+      bar.tick()
+    }
   }
-  console.log('DONE')
+  console.log('DONE!')
 }
 
-run()
-  .catch(err => {
-    console.log(`${err}`)
-  })
+try {
+  run()
+} catch(err) {
+  logger.error(`${err}`)
+}
