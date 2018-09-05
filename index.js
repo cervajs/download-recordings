@@ -15,12 +15,37 @@ const commander = require('commander')
 
 commander
   .version('0.1.0')
-  .option('-f, --date-from <value>', '')
-  .option('-t, --date-to <value>', '')
-  .option('-h, --host <value>', '')
-  .option('-k, --api-key <value>', '')
-  .option('-s, --api-secret <value>', '')
+  .option('-f, --date-from <value>', 'from date i.e 2018-08-01')
+  .option('-t, --date-to <value>', 'to date i.e 2018-08-31')
+  .option('-h, --host <value>', '(REQUIRED) PBX name ')
+  .option('-k, --api-key <value>', '(REQUIRED) API key ')
+  .option('-s, --api-secret <value>', '(REQUIRED) API key secret ')
   .parse(process.argv)
+
+  if (!process.argv.slice(2).length) {
+    commander.help();
+  }
+  
+  if (!commander.host) {
+    console.log('--host required');
+    process.exit(0);
+  }
+  if (!commander.apiKey) {
+    console.log('--api-key required');
+    process.exit(0);
+  }
+  
+  if (!commander.apiSecret) {
+    console.log('--api-secret required');
+    process.exit(0);
+  }
+  
+  if (!commander.dateFrom || !commander.dateTo ) {
+    console.log('Date is required');
+    process.exit(0);
+  }
+
+
 
 /**
  * @type {string} https://ipbx.docs.apiary.io/#reference/calls/calls/get-call-history
