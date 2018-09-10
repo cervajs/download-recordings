@@ -3,7 +3,7 @@ This script can download all recordings defined by call history filter
 Downloaded files are in directories YYYY\MM\DD in working directory
 */
 
-const rp = require('request-promise-native')
+const axios = require('axios')
 const mkdirp = require('mkdirp-promise')
 const fs = require('fs')
 const path = require('path')
@@ -45,8 +45,6 @@ commander
     process.exit(0);
   }
 
-
-
 /**
  * @type {string} https://ipbx.docs.apiary.io/#reference/calls/calls/get-call-history
  */
@@ -59,25 +57,19 @@ const apiParams = `startTime=${dateFrom}&endTime=${dateTo}`
 
 /**
  * Creates options object for specific url 
- * @param uri
- * @params json
+ * @param url
+ * @params responseType
  * @returns Object 
  */
-const createRequestOptions = (uri, json = false) => {
+const createRequestOptions = (url, responseType = 'json') => {
   const {apiKey, apiSecret} = commander
   return {
-    uri,
-    method: 'GET',
+    url,
     auth: {
-      'user': apiKey,
-      'pass': apiSecret,
-      sendImmediately: true
+      username: apiKey,
+      password: apiSecret
     },
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    resolveWithFullResponse: true,
-    json
+    responseType
   }
 }
 
@@ -89,10 +81,10 @@ const getRecordsToDownload = async () => {
   const {host} = commander
   const requestOptions = createRequestOptions(
     `https://${host}/api/calls?${apiParams}`, 
-    true
   )
-  const {body} = await rp(requestOptions)
-  return body.items.filter(row => row.filename.length > 0)
+  const {data} = await axios(requestOptions)
+  // const {body} = await rp(requestOptions)
+  return data.items.filter(row => row.filename.length > 0)
 }
 
 const logger = winston.createLogger({
@@ -114,24 +106,29 @@ const logger = winston.createLogger({
 
 /**
  * Download concrete record
- * @param urlPath
  * @param fileName
  * @returns {Promise}
  */
-const downloadFile = (urlPath, fileName) => {
+const downloadFile = (fileName) => {
   const {host} = commander
 
   return new Promise(async (resolve, reject) => {
     fileName = `downloads/${fileName.replace(/\*/gi, 'star')}`
+    let path = `https://${host}/api/records/${encodeURIComponent(fileName)}/stream`
     try {
-      const requestOptions = createRequestOptions(`https://${host}${urlPath}`)
-      const response = await rp(requestOptions)
-      await prepareDirectory(fileName)
-      const stream = fs
-        .createWriteStream(fileName)
-        .on('finish', resolve)
-        .on('error', error => reject(error))
-      response.pipe(stream)
+      const requestOptions = createRequestOptions(path, 'stream')
+      const response = await axios(requestOptions)  
+
+      if (response.status >= 200 && response.status < 300) {
+        await prepareDirectory(fileName)
+        const stream = fs
+          .createWriteStream(fileName)
+          .on('finish', resolve)
+          .on('error', error => reject(error))
+        response.data.pipe(stream)  
+      } else {
+        reject(response.statusMessage)
+      }      
     } catch (e) {
       reject(e.message)
     }
@@ -154,6 +151,8 @@ const prepareDirectory = async (filename) => {
 
 const run = async () => {
   const records = await getRecordsToDownload()
+
+  // process.exit(0)
   if (records.length === 0) {
     console.log('No records')
     return
@@ -162,9 +161,9 @@ const run = async () => {
   console.log(`Number of records: ${records.length}`)
   const bar = new ProgressBar('Percent done :percent, estimated time :eta(s)', { total: records.length })
 
-  for (const {linkedid, filename} of records) {
+  for (const {uniqueid, filename} of records) {
     try {
-      await downloadFile(`/api/records/${linkedid}/stream`, filename)
+      await downloadFile(filename)
       logger.info(`File ${filename} successfully downloaded`)
     } catch (e) {
       logger.error(`File ${filename} could not be downloaded because "${e}"`)
