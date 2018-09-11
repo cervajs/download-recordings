@@ -113,16 +113,16 @@ const downloadFile = (fileName) => {
   const {host} = commander
 
   return new Promise(async (resolve, reject) => {
-    fileName = `downloads/${fileName.replace(/\*/gi, 'star')}`
+    const destinationFileName = `downloads/${fileName.replace(/\*/gi, 'star')}`
     let path = `https://${host}/api/records/${encodeURIComponent(fileName)}/stream`
     try {
       const requestOptions = createRequestOptions(path, 'stream')
       const response = await axios(requestOptions)  
 
       if (response.status >= 200 && response.status < 300) {
-        await prepareDirectory(fileName)
+        await prepareDirectory(destinationFileName)
         const stream = fs
-          .createWriteStream(fileName)
+          .createWriteStream(destinationFileName)
           .on('finish', resolve)
           .on('error', error => reject(error))
         response.data.pipe(stream)  
