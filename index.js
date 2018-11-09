@@ -7,9 +7,7 @@ const axios = require('axios')
 const mkdirp = require('mkdirp-promise')
 const fs = require('fs')
 const path = require('path')
-const util = require('util')
 const ProgressBar = require('progress')
-const moment = require('moment')
 const winston = require('winston')
 const commander = require('commander')
 
@@ -52,8 +50,9 @@ commander
 // const apiParams = 'startTime=' + moment().subtract(6, 'months').format() + '&endTime=' + moment().format()
 
 // Read date interval from args
+const pageSize = '100'
 const {dateFrom, dateTo} = commander
-const apiParams = `startTime=${dateFrom}&endTime=${dateTo}`
+const apiParams = `startTime=${dateFrom}&endTime=${dateTo}&pageSize=${pageSize}&page=`
 
 /**
  * Creates options object for specific url 
@@ -75,16 +74,25 @@ const createRequestOptions = (url, responseType = 'json') => {
 
 /**
  * Download list of records to be downloaded
- * @returns Array
+ * @returns {Promise<Set<any>>}
  */
 const getRecordsToDownload = async () => {
   const {host} = commander
   const requestOptions = createRequestOptions(
     `https://${host}/api/calls?${apiParams}`, 
   )
-  const {data} = await axios(requestOptions)
-  // const {body} = await rp(requestOptions)
-  return data.items.filter(row => row.filename.length > 0)
+    let nexPage = true
+    let page = 1
+    const records = []
+    while (nexPage) {
+        const newRequestOpt = {...requestOptions}
+        newRequestOpt.url += `${page}`
+        const {data} = await axios(newRequestOpt)
+        records.push(...data.items)
+        ++page
+        nexPage = data.links.length && data.links.filter(link => link.rel === 'next')
+    }
+  return new Set(records.filter(row => row.filename.length > 0).map(row => row.filename))
 }
 
 const logger = winston.createLogger({
@@ -150,18 +158,17 @@ const prepareDirectory = async (filename) => {
 }
 
 const run = async () => {
+  console.log(`Retrieving data from the exchange`)
   const records = await getRecordsToDownload()
-
-  // process.exit(0)
-  if (records.length === 0) {
+  if (records.size === 0) {
     console.log('No records')
     return
   }
 
-  console.log(`Number of records: ${records.length}`)
-  const bar = new ProgressBar('Percent done :percent, estimated time :eta(s)', { total: records.length })
+  console.log(`Number of records: ${records.size}`)
+  const bar = new ProgressBar('Percent done :percent, estimated time :eta(s)', { total: records.size })
 
-  for (const {uniqueid, filename} of records) {
+  for (const filename of records) {
     try {
       await downloadFile(filename)
       logger.info(`File ${filename} successfully downloaded`)
