@@ -51,7 +51,7 @@ commander
 // const apiParams = 'startTime=' + moment().subtract(6, 'months').format() + '&endTime=' + moment().format()
 
 // Read date interval from args
-const pageSize = '300'
+const pageSize = '50'
 const {dateFrom, dateTo} = commander
 const apiParams = `startTime=${dateFrom}&endTime=${dateTo}&pageSize=${pageSize}&page=`
 
