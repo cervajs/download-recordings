@@ -10,6 +10,7 @@ const path = require('path')
 const ProgressBar = require('progress')
 const winston = require('winston')
 const commander = require('commander')
+const qs = require('querystring')
 
 commander
   .version('0.1.0')
@@ -50,7 +51,7 @@ commander
 // const apiParams = 'startTime=' + moment().subtract(6, 'months').format() + '&endTime=' + moment().format()
 
 // Read date interval from args
-const pageSize = '100'
+const pageSize = '300'
 const {dateFrom, dateTo} = commander
 const apiParams = `startTime=${dateFrom}&endTime=${dateTo}&pageSize=${pageSize}&page=`
 
@@ -73,6 +74,22 @@ const createRequestOptions = (url, responseType = 'json') => {
 }
 
 /**
+ * Get pages count from last link
+ * @param data
+ * @returns {number}
+ */
+const getLastPage = data => {
+    if (data.links.length) {
+        const lastLink = data.links.filter(link => link.rel === 'last')[0]
+        if (lastLink) {
+            const {page} = qs.parse(lastLink.href.split("?")[1])
+            return parseInt(page)
+        }
+    }
+    return 1
+}
+
+/**
  * Download list of records to be downloaded
  * @returns {Promise<Set<any>>}
  */
@@ -81,6 +98,9 @@ const getRecordsToDownload = async () => {
   const requestOptions = createRequestOptions(
     `https://${host}/api/calls?${apiParams}`, 
   )
+    const prospecting  = await axios(requestOptions)
+    const pagesCount = getLastPage(prospecting.data)
+    const bar = new ProgressBar('Retrieving cdr data from the iPBX. Percent done :percent, estimated time :eta(s)', { total: pagesCount })
     let nexPage = true
     let page = 1
     const records = []
@@ -90,6 +110,7 @@ const getRecordsToDownload = async () => {
         const {data} = await axios(newRequestOpt)
         records.push(...data.items)
         ++page
+        bar.tick()
         nexPage = data.links.length && data.links.filter(link => link.rel === 'next')
     }
   return new Set(records.filter(row => row.filename.length > 0).map(row => row.filename))
@@ -158,7 +179,6 @@ const prepareDirectory = async (filename) => {
 }
 
 const run = async () => {
-  console.log(`Retrieving data from the exchange`)
   const records = await getRecordsToDownload()
   if (records.size === 0) {
     console.log('No records')
@@ -166,7 +186,7 @@ const run = async () => {
   }
 
   console.log(`Number of records: ${records.size}`)
-  const bar = new ProgressBar('Percent done :percent, estimated time :eta(s)', { total: records.size })
+  const bar = new ProgressBar('Downloading files. Percent done :percent, estimated time :eta(s)', { total: records.size })
 
   for (const filename of records) {
     try {
