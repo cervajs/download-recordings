@@ -20,6 +20,7 @@ commander
   .option('-e, --email <value>', '(REQUIRED) Email ')
   .option('-p, --password <value>', `(REQUIRED) User's password `)
   .option('-d, --download', `Specify this argument if you want to download found recordings`)
+  .option('-x, --extension <value>', `Specify extension for recordings i.e wav | mp3. Extension wav for filename is allowed only for PBX with enabled voice analyse.`)
   .option(
     '-q, --queues <value>',
     'Specify queue or queues for which should be recordings downloaded. In the case of multiple queues, separate their names with a comma e.g. Queue1,Queue2'
@@ -41,6 +42,10 @@ const validateArguments = (args) => {
   if (!args.dateFrom || !args.dateTo) {
     throw new Error('Date is required')
   }
+
+  if (args.extension !== undefined && args.extension !== 'wav' && args.extension !== 'mp3') {
+    throw new Error('Invalid extension')
+  }
 }
 
 const getAuthToken = async(email, password) => {
@@ -56,21 +61,6 @@ const getAuthToken = async(email, password) => {
     }
     throw error
   }
-}
-
-const getPbxId = async(token) => {
-  const { data } = await axios.get(`${CENTRAL_API_URL}/v1/users/me`, {
-    headers: {
-      authorization: `Bearer ${token}`
-    }
-  })
-  const pbxService = data.services.find(({ type }) => type === 'pbx')
-
-  if (!pbxService) {
-    throw new Error('User has no PBX assigned')
-  }
-
-  return pbxService.properties.pbxId
 }
 
 const parseQueuesArgToQuery = () => {
@@ -91,7 +81,7 @@ const prepareDirectory = (filename) => {
   }
 }
 
-const getCallList = async(token) => {
+const getCallList = async(token, extension = 'mp3') => {
   const calls = await axios({
     method: 'GET',
     baseURL: IPBX_API_URL,
@@ -106,16 +96,17 @@ const getCallList = async(token) => {
     }
   })
 
-  return calls.data.filter(call => !!call.recording)
-}
+  return calls.data
+  .filter(call => !!call.recording)
+  .map(call => ({ ...call, recording: call.recording.replace(/mp3|wav/gi, extension) }))}
 
-const downloadRecording = (filename, authToken, pbxId) =>
+const downloadRecording = (filename, authToken) =>
   new Promise(async(resolve, reject) => {
     const destinationFilename = `downloads/${filename.replace(/\*/gi, 'star')}`
     try {
       const response = await axios({
         baseURL: IPBX_API_URL,
-        url: `recordings/${encodeURIComponent(filename)}/ipbx/${pbxId}`,
+        url: `recordings/${encodeURIComponent(filename)}`,
         responseType: 'stream',
         headers: {
           authorization: `Bearer ${authToken}`
@@ -133,7 +124,7 @@ const downloadRecording = (filename, authToken, pbxId) =>
     }
   })
 
-const downloadRecordings = async(calls, authToken, pbxId) => {
+const downloadRecordings = async(calls, authToken) => {
   console.log(`Found ${calls.length} calls with recording`)
   const bar = new ProgressBar(
     'Downloading files. Percent done :percent, estimated time :eta(s)',
@@ -141,7 +132,7 @@ const downloadRecordings = async(calls, authToken, pbxId) => {
   )
   for (const { recording } of calls) {
     try {
-      await downloadRecording(recording, authToken, pbxId)
+      await downloadRecording(recording, authToken)
       console.log(`File ${recording} successfully downloaded`)
     } catch (error) {
       console.error(
@@ -166,15 +157,14 @@ const calculateRecordings = (calls) => {
   try {
     validateArguments(commander)
     const authToken = await getAuthToken(commander.email, commander.password)
-    const pbxId = await getPbxId(authToken)
-    const calls = await getCallList(authToken)
+    const calls = await getCallList(authToken, commander.extension)
     if (calls.length === 0) {
       console.log('No calls found for specified filter')
       return
     }
 
     if (commander.download) {
-      await downloadRecordings(calls, authToken, pbxId)
+      await downloadRecordings(calls, authToken)
     } else {
       calculateRecordings(calls)
     }
