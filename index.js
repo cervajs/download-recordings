@@ -172,7 +172,7 @@ const downloadFile = (fileName) => {
 const prepareDirectory = async (filename) => {
   const dir = path.dirname(filename)
   try {
-    await fsAccess(dir, fs.constants.R_OK | fs.constants.W_OK)
+    fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK)
   } catch (e) {
     return mkdirp(dir)
   }
